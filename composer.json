@@ -1,0 +1,27 @@
+{
+  "name": "pccomponentes/criteria-dbal-adapter",
+  "description": "Adapter for DBAL for implement filter/criteria pattern",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Aaron Bernabeu",
+      "email": "aaron.bernabeu@pccomponentes.com"
+    }
+  ],
+  "require": {
+    "php": "^7.4",
+    "doctrine/dbal": "^2.0",
+    "pccomponentes/criteria": "^1.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "PcComponentes\\CriteriaDBALAdapter\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "PcComponentes\\CriteriaDBALAdapter\\Tests\\": "tests/"
+    }
+  }
+}
