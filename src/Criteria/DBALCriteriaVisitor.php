@@ -97,10 +97,14 @@ final class DBALCriteriaVisitor implements FilterVisitorInterface
             return 'LIKE';
         }
 
+        if (FilterOperator::NOT_EQUAL === $filter->operator()->value()) {
+            return '<>';
+        }
+
         return $filter->operator()->value();
     }
 
-    private function mapParameter(Filter $filter): string
+    private function mapParameter(Filter $filter)
     {
         if (FilterOperator::CONTAINS === $filter->operator()->value()) {
             return '%' . $filter->value()->value() . '%';
