@@ -5,6 +5,7 @@ namespace PcComponentes\CriteriaDBALAdapter\Criteria;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Pccomponentes\Criteria\Domain\Criteria\AndFilter;
 use Pccomponentes\Criteria\Domain\Criteria\Criteria;
+use Pccomponentes\Criteria\Domain\Criteria\Filter;
 use Pccomponentes\Criteria\Domain\Criteria\FilterInterface;
 use Pccomponentes\Criteria\Domain\Criteria\NullValueFilter;
 use Pccomponentes\Criteria\Domain\Criteria\FilterOperator;
@@ -77,10 +78,21 @@ final class DBALCriteriaVisitor implements FilterVisitorInterface
         return $this->mapFieldValue($filter->field()->value())
             . ' '
             . $this->mapOperator($filter)
-            . (\in_array($filter->operator()->value(), [FilterOperator::IN, FilterOperator::NOT_IN]) ? ' (' : ' ')
-            . ':' . $filter->field()->value()
-            . $this->countParams
-            . (\in_array($filter->operator()->value(), [FilterOperator::IN, FilterOperator::NOT_IN]) ? ')' : '');
+            . ' '
+            . $this->parameterExpression($filter);
+    }
+
+    private function parameterExpression(Filter $filter): string
+    {
+        if (\in_array($filter->operator()->value(), [FilterOperator::IS_NULL, FilterOperator::IS_NOT_NULL], true)) {
+            return '';
+        }
+
+        if (\in_array($filter->operator()->value(), [FilterOperator::IN, FilterOperator::NOT_IN])) {
+            return '(:' . $filter->field()->value() . $this->countParams . ')';
+        }
+
+        return ':' . $filter->field()->value() . $this->countParams;
     }
 
     private function buildExpression(FilterInterface $filter)
