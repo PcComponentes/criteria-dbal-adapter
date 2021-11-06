@@ -50,12 +50,12 @@ final class DBALCriteriaVisitor implements FilterVisitorInterface
 
     public function visitAnd(AndFilter $filter): string
     {
-        return '( '. $this->buildExpression($filter->left()) .' AND '. $this->buildExpression($filter->right()) .' )';
+        return '( ' . $this->buildExpression($filter->left()) . ' AND ' . $this->buildExpression($filter->right()) . ' )';
     }
 
     public function visitOr(OrFilter $filter): string
     {
-        return '( '. $this->buildExpression($filter->left()) .' OR '. $this->buildExpression($filter->right()) .' )';
+        return '( ' . $this->buildExpression($filter->left()) . ' OR ' . $this->buildExpression($filter->right()) . ' )';
     }
 
     public function visitFilter(Filter $filter): string
@@ -71,10 +71,23 @@ final class DBALCriteriaVisitor implements FilterVisitorInterface
         return $this->mapFieldValue($filter->field()->value())
             . ' '
             . $this->mapOperator($filter)
-            . (\in_array($filter->operator()->value(), [FilterOperator::IN, FilterOperator::NOT_IN]) ? ' (' : ' ')
-            . ':' . $filter->field()->value()
-            . $this->countParams
-            . (\in_array($filter->operator()->value(), [FilterOperator::IN, FilterOperator::NOT_IN]) ? ')' : '');
+            . ' '
+            . $this->parameterExpression($filter);
+    }
+
+    private function parameterExpression(Filter $filter): string
+    {
+        if (\in_array($filter->operator()->value(), [FilterOperator::IS_NULL, FilterOperator::IS_NOT_NULL], true)) {
+            return '';
+        }
+
+        $parameterName = ':' . $filter->field()->value() . $this->countParams;
+
+        if (\in_array($filter->operator()->value(), [FilterOperator::IN, FilterOperator::NOT_IN])) {
+            return '(' . $parameterName . ')';
+        }
+
+        return $parameterName;
     }
 
     private function buildExpression(FilterInterface $filter)
