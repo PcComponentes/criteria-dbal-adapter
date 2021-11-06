@@ -11,8 +11,8 @@
   ],
   "require": {
     "php": "^7.4",
-    "doctrine/dbal": "^2.0",
-    "pccomponentes/criteria": "^0.1"
+    "doctrine/dbal": "^2.0||^3.0",
+    "pccomponentes/criteria": "^0.1.5"
   },
   "autoload": {
     "psr-4": {
