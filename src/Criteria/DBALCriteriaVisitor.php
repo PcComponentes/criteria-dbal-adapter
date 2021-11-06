@@ -50,12 +50,12 @@ final class DBALCriteriaVisitor implements FilterVisitorInterface
 
     public function visitAnd(AndFilter $filter): string
     {
-        return '( '. $this->buildExpression($filter->left()) .' AND '. $this->buildExpression($filter->right()) .' )';
+        return '( ' . $this->buildExpression($filter->left()) . ' AND ' . $this->buildExpression($filter->right()) . ' )';
     }
 
     public function visitOr(OrFilter $filter): string
     {
-        return '( '. $this->buildExpression($filter->left()) .' OR '. $this->buildExpression($filter->right()) .' )';
+        return '( ' . $this->buildExpression($filter->left()) . ' OR ' . $this->buildExpression($filter->right()) . ' )';
     }
 
     public function visitFilter(Filter $filter): string
@@ -81,11 +81,13 @@ final class DBALCriteriaVisitor implements FilterVisitorInterface
             return '';
         }
 
+        $parameterName = ':' . $filter->field()->value() . $this->countParams;
+
         if (\in_array($filter->operator()->value(), [FilterOperator::IN, FilterOperator::NOT_IN])) {
-            return '(:' . $filter->field()->value() . $this->countParams . ')';
+            return '(' . $parameterName . ')';
         }
 
-        return ':' . $filter->field()->value() . $this->countParams;
+        return $parameterName;
     }
 
     private function buildExpression(FilterInterface $filter)
