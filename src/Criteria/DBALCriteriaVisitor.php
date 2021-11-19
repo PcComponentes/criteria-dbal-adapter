@@ -5,8 +5,8 @@ namespace PcComponentes\CriteriaDBALAdapter\Criteria;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Pccomponentes\Criteria\Domain\Criteria\AndFilter;
 use Pccomponentes\Criteria\Domain\Criteria\Criteria;
+use Pccomponentes\Criteria\Domain\Criteria\Filter;
 use Pccomponentes\Criteria\Domain\Criteria\FilterInterface;
-use Pccomponentes\Criteria\Domain\Criteria\NullValueFilter;
 use Pccomponentes\Criteria\Domain\Criteria\FilterOperator;
 use Pccomponentes\Criteria\Domain\Criteria\FilterVisitorInterface;
 use Pccomponentes\Criteria\Domain\Criteria\OrFilter;
@@ -50,15 +50,15 @@ final class DBALCriteriaVisitor implements FilterVisitorInterface
 
     public function visitAnd(AndFilter $filter): string
     {
-        return '( '. $this->buildExpression($filter->left()) .' AND '. $this->buildExpression($filter->right()) .' )';
+        return '( ' . $this->buildExpression($filter->left()) . ' AND ' . $this->buildExpression($filter->right()) . ' )';
     }
 
     public function visitOr(OrFilter $filter): string
     {
-        return '( '. $this->buildExpression($filter->left()) .' OR '. $this->buildExpression($filter->right()) .' )';
+        return '( ' . $this->buildExpression($filter->left()) . ' OR ' . $this->buildExpression($filter->right()) . ' )';
     }
 
-    public function visitFilter(FilterInterface $filter): string
+    public function visitFilter(Filter $filter): string
     {
         $this->countParams++;
 
@@ -68,19 +68,26 @@ final class DBALCriteriaVisitor implements FilterVisitorInterface
             $this->mapType($filter),
         );
 
-        if ($filter instanceof NullValueFilter) {
-            return $this->mapFieldValue($filter->field()->value())
-                . ' '
-                . $filter->operator()->value();
-        }
-
         return $this->mapFieldValue($filter->field()->value())
             . ' '
             . $this->mapOperator($filter)
-            . (\in_array($filter->operator()->value(), [FilterOperator::IN, FilterOperator::NOT_IN]) ? ' (' : ' ')
-            . ':' . $filter->field()->value()
-            . $this->countParams
-            . (\in_array($filter->operator()->value(), [FilterOperator::IN, FilterOperator::NOT_IN]) ? ')' : '');
+            . ' '
+            . $this->parameterExpression($filter);
+    }
+
+    private function parameterExpression(Filter $filter): string
+    {
+        if (\in_array($filter->operator()->value(), [FilterOperator::IS_NULL, FilterOperator::IS_NOT_NULL], true)) {
+            return '';
+        }
+
+        $parameterName = ':' . $filter->field()->value() . $this->countParams;
+
+        if (\in_array($filter->operator()->value(), [FilterOperator::IN, FilterOperator::NOT_IN])) {
+            return '(' . $parameterName . ')';
+        }
+
+        return $parameterName;
     }
 
     private function buildExpression(FilterInterface $filter)
@@ -88,7 +95,7 @@ final class DBALCriteriaVisitor implements FilterVisitorInterface
         return $filter->accept($this);
     }
 
-    private function mapType(FilterInterface $filter): ?int
+    private function mapType(Filter $filter): ?int
     {
         if (\in_array($filter->operator()->value(), [FilterOperator::IN, FilterOperator::NOT_IN])) {
             return \Doctrine\DBAL\Connection::PARAM_STR_ARRAY;
@@ -97,7 +104,7 @@ final class DBALCriteriaVisitor implements FilterVisitorInterface
         return null;
     }
 
-    private function mapOperator(FilterInterface $filter): string
+    private function mapOperator(Filter $filter): string
     {
         if (FilterOperator::CONTAINS === $filter->operator()->value()) {
             return 'LIKE';
@@ -118,12 +125,8 @@ final class DBALCriteriaVisitor implements FilterVisitorInterface
         return $filter->operator()->value();
     }
 
-    private function mapParameter(FilterInterface $filter)
+    private function mapParameter(Filter $filter)
     {
-        if (\in_array($filter->operator()->value(), [FilterOperator::IS_NULL, FilterOperator::IS_NOT_NULL])) {
-            return;
-        }
-
         if (FilterOperator::CONTAINS === $filter->operator()->value()) {
             return '%' . $filter->value()->value() . '%';
         }
