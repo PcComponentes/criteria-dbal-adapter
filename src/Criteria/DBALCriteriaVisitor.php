@@ -114,6 +114,14 @@ final class DBALCriteriaVisitor implements FilterVisitorInterface
             return '<>';
         }
 
+        if (FilterOperator::GTE === $filter->operator()->value()) {
+            return '>=';
+        }
+
+        if (FilterOperator::LTE === $filter->operator()->value()) {
+            return '<=';
+        }
+
         return $filter->operator()->value();
     }
 
