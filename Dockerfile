@@ -1,9 +1,11 @@
-FROM php:8.0-cli-alpine3.13
+FROM php:8.2-cli-alpine3.18
 
 RUN apk add --no-cache \
         libzip-dev \
-        openssl-dev && \
-    docker-php-ext-install -j$(nproc) \
+        openssl-dev \
+        linux-headers
+
+RUN docker-php-ext-install -j$(nproc) \
         zip \
         bcmath
 
