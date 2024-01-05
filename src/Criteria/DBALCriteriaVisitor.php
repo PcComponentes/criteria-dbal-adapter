@@ -1,7 +1,10 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace PcComponentes\CriteriaDBALAdapter\Criteria;
 
+use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Pccomponentes\Criteria\Domain\Criteria\AndFilter;
 use Pccomponentes\Criteria\Domain\Criteria\Criteria;
@@ -9,6 +12,7 @@ use Pccomponentes\Criteria\Domain\Criteria\Filter;
 use Pccomponentes\Criteria\Domain\Criteria\FilterInterface;
 use Pccomponentes\Criteria\Domain\Criteria\FilterOperator;
 use Pccomponentes\Criteria\Domain\Criteria\FilterVisitorInterface;
+use Pccomponentes\Criteria\Domain\Criteria\Order;
 use Pccomponentes\Criteria\Domain\Criteria\OrFilter;
 
 final class DBALCriteriaVisitor implements FilterVisitorInterface
@@ -30,32 +34,37 @@ final class DBALCriteriaVisitor implements FilterVisitorInterface
             $this->queryBuilder->andWhere($this->buildExpression($theFilter));
         }
 
-        if ($criteria->hasOrder()) {
-            $this->queryBuilder->orderBy(
-                $this->mapFieldValue($criteria->order()->orderBy()->value()),
-                $criteria->order()->orderType()->value(),
-            );
+        if ($criteria->hasSorting()) {
+            foreach ($criteria->sorting() as $order) {
+                /** @var $order Order */
+                $this->queryBuilder->addOrderBy(
+                    $this->mapFieldValue($order->orderBy()->value()),
+                    $order->orderType()->value(),
+                );
+            }
         }
 
         if (null !== $criteria->offset()) {
             $this->queryBuilder->setFirstResult($criteria->offset());
         }
 
-        if (null === $criteria->limit()) {
-            return;
+        if (null !== $criteria->limit()) {
+            $this->queryBuilder->setMaxResults($criteria->limit());
         }
-
-        $this->queryBuilder->setMaxResults($criteria->limit());
     }
 
     public function visitAnd(AndFilter $filter): string
     {
-        return '( ' . $this->buildExpression($filter->left()) . ' AND ' . $this->buildExpression($filter->right()) . ' )';
+        return '( ' . $this->buildExpression($filter->left()) . ' AND ' . $this->buildExpression(
+                $filter->right()
+            ) . ' )';
     }
 
     public function visitOr(OrFilter $filter): string
     {
-        return '( ' . $this->buildExpression($filter->left()) . ' OR ' . $this->buildExpression($filter->right()) . ' )';
+        return '( ' . $this->buildExpression($filter->left()) . ' OR ' . $this->buildExpression(
+                $filter->right()
+            ) . ' )';
     }
 
     public function visitFilter(Filter $filter): string
@@ -83,7 +92,7 @@ final class DBALCriteriaVisitor implements FilterVisitorInterface
 
         $parameterName = ':' . $filter->field()->value() . $this->countParams;
 
-        if (\in_array($filter->operator()->value(), [FilterOperator::IN, FilterOperator::NOT_IN])) {
+        if (\in_array($filter->operator()->value(), [FilterOperator::IN, FilterOperator::NOT_IN], true)) {
             return '(' . $parameterName . ')';
         }
 
@@ -97,8 +106,8 @@ final class DBALCriteriaVisitor implements FilterVisitorInterface
 
     private function mapType(Filter $filter): ?int
     {
-        if (\in_array($filter->operator()->value(), [FilterOperator::IN, FilterOperator::NOT_IN])) {
-            return \Doctrine\DBAL\Connection::PARAM_STR_ARRAY;
+        if (\in_array($filter->operator()->value(), [FilterOperator::IN, FilterOperator::NOT_IN], true)) {
+            return Connection::PARAM_STR_ARRAY;
         }
 
         return null;
@@ -106,26 +115,16 @@ final class DBALCriteriaVisitor implements FilterVisitorInterface
 
     private function mapOperator(Filter $filter): string
     {
-        if (FilterOperator::CONTAINS === $filter->operator()->value()) {
-            return 'LIKE';
-        }
-
-        if (FilterOperator::NOT_EQUAL === $filter->operator()->value()) {
-            return '<>';
-        }
-
-        if (FilterOperator::GTE === $filter->operator()->value()) {
-            return '>=';
-        }
-
-        if (FilterOperator::LTE === $filter->operator()->value()) {
-            return '<=';
-        }
-
-        return $filter->operator()->value();
+        return match ($filter->operator()->value()) {
+            FilterOperator::CONTAINS => 'LIKE',
+            FilterOperator::NOT_EQUAL => '<>',
+            FilterOperator::GTE => '>=',
+            FilterOperator::LTE => '<=',
+            default => $filter->operator()->value(),
+        };
     }
 
-    private function mapParameter(Filter $filter)
+    private function mapParameter(Filter $filter): string
     {
         if (FilterOperator::CONTAINS === $filter->operator()->value()) {
             return '%' . $filter->value()->value() . '%';
