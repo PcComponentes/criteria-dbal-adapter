@@ -124,7 +124,7 @@ final class DBALCriteriaVisitor implements FilterVisitorInterface
         };
     }
 
-    private function mapParameter(Filter $filter): string
+    private function mapParameter(Filter $filter)
     {
         if (FilterOperator::CONTAINS === $filter->operator()->value()) {
             return '%' . $filter->value()->value() . '%';
